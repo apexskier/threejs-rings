@@ -46,6 +46,9 @@ function init() {
 
   var loader = new THREE.STLLoader();
 
+  var ringGroup = new THREE.Group();
+  scene.add(ringGroup);
+
   // Binary files
 
   var goldMaterial = new THREE.MeshPhongMaterial({
@@ -63,7 +66,7 @@ function init() {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
 
-    scene.add(mesh);
+    ringGroup.add(mesh);
   });
 
   var goldMaterial = new THREE.MeshPhongMaterial({
@@ -83,7 +86,7 @@ function init() {
 
     geometry.computeVertexNormals();
 
-    scene.add(mesh);
+    ringGroup.add(mesh);
   });
 
   const ringGeometry = new CustomRingGeometry({
@@ -104,9 +107,9 @@ function init() {
   // ringGeometry.computeVertexNormals();
 
   var helper = new THREE.VertexNormalsHelper(ringMesh, 2, 0x00ff00, 1);
-  scene.add(helper);
+  ringGroup.add(helper);
 
-  scene.add(ringMesh);
+  ringGroup.add(ringMesh);
 
   // Lights
 
