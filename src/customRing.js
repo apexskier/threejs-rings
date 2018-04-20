@@ -18,6 +18,7 @@ function CustomRingGeometry({
   thetaSegments,
   thetaLength,
   height,
+  pointsEdgeHeightPercent,
   points,
 }) {
   Geometry.call(this);
@@ -30,6 +31,7 @@ function CustomRingGeometry({
     thetaSegments,
     thetaLength,
     height,
+    pointsEdgeHeightPercent,
     points,
   };
 
@@ -48,6 +50,7 @@ function CustomRingBufferGeometry({
   thetaSegments = 8,
   thetaLength = Math.PI * 2,
   height = 1,
+  pointsEdgeHeightPercent = 0.1,
   points,
 }) {
   BufferGeometry.call(this);
@@ -60,6 +63,7 @@ function CustomRingBufferGeometry({
     thetaSegments,
     thetaLength,
     height,
+    pointsEdgeHeightPercent,
     points,
   };
 
@@ -72,11 +76,10 @@ function CustomRingBufferGeometry({
   const indices = [];
   const vertices = [];
   const normals = [];
-  // const uvs = [];
+  const uvs = [];
 
   let radius = innerRadius;
-  const vertex = new Vector3();
-  // const uv = new Vector2();
+  const uv = new Vector2();
 
   // generate vertices, normals and uvs
 
@@ -95,12 +98,15 @@ function CustomRingBufferGeometry({
       preX += 1;
     }
     return preY;
-    const percentThrough = (thetaPercent - preX) / (postX - preX);
-    return postY * percentThrough + preY * percentThrough;
+    // const percentThrough = (thetaPercent - preX) / (postX - preX);
+    // return postY * percentThrough + preY * percentThrough;
   }
 
+  const pointHeightFactor = 3;
+  const maxHeight = height + pointHeightFactor / 2;
+  const pointHeightOffset = pointsEdgeHeightPercent * height;
+
   for (let thetaIndex = 0; thetaIndex <= thetaSegments; thetaIndex++) {
-    console.log(`${thetaIndex} / ${thetaSegments}`);
     // values are generate from the inside of the ring to the outside
 
     const percent = thetaIndex / thetaSegments;
@@ -109,52 +115,52 @@ function CustomRingBufferGeometry({
     const cosAngle = Math.cos(segment);
     const sinAngle = Math.sin(segment);
 
-    const heightOffset = height + 0.3 * pointForTheta(percent);
+    const pointHeight =
+      height + (pointForTheta(percent) - 0.5) * pointHeightFactor;
 
     const z = 0;
     let x = outerRadius * cosAngle;
     let y = outerRadius * sinAngle;
-    
-    const outerNormal = (new Vector3(cosAngle, sinAngle, 0)).normalize();
+
+    const outerNormal = new Vector3(cosAngle, sinAngle, 0).normalize();
+    const zTop= z + pointHeight;
+    const zMid = zTop - pointHeightOffset;
+    const uvTop = (pointHeight / maxHeight) / 2;
+    const uvMid = ((pointHeight - pointHeightOffset) / maxHeight) / 2;
 
     // bottom outer
     vertices.push(x, y, z);
     normals.push(0, 0, 1);
+    uvs.push(percent, 0.5);
     // mid outer
-    vertices.push(x, y, z + heightOffset - 0.3 * height);
+    vertices.push(x, y, zMid);
     normals.push(outerNormal.x, outerNormal.y, outerNormal.z);
+    uvs.push(percent, 0.5 + uvMid);
     // top outer
-    vertices.push(x, y, z + heightOffset);
+    vertices.push(x, y, zTop);
     normals.push(0, 0, -1);
+    uvs.push(percent, 0.5 + uvTop);
 
     x = innerRadius * cosAngle;
     y = innerRadius * sinAngle;
 
-    const innerNormal = (new Vector3(-cosAngle, -sinAngle, 0)).normalize();
+    const innerNormal = new Vector3(-cosAngle, -sinAngle, 0).normalize();
 
     // bottom inner
-    vertices.push(x, y, z);
+    vertices.push(x, y, 0.5);
     normals.push(0, 0, 1);
+    uvs.push(percent, 0);
     // mid inner
-    vertices.push(x, y, z + heightOffset - 0.3 * height);
+    vertices.push(x, y, zMid);
     normals.push(innerNormal.x, innerNormal.y, innerNormal.z);
+    uvs.push(percent, 0.5 - uvMid);
     // top inner
-    vertices.push(x, y, z + heightOffset);
+    vertices.push(x, y, zTop);
     normals.push(0, 0, -1);
-
-    // normal
-
-
-    // uv
-
-    // uv.x = (vertex.x / outerRadius + 1) / 2;
-    // uv.y = (vertex.y / outerRadius + 1) / 2;
-
-    // uvs.push(uv.x, uv.y);
-    // uvs.push(uv.x, uv.y);
+    uvs.push(percent, 0.5 - uvTop);
   }
 
-  // indices
+  console.log(uvs);
 
   for (let thetaIndex = 0; thetaIndex < thetaSegments; thetaIndex++) {
     const botOut = 6 * thetaIndex;
@@ -163,7 +169,13 @@ function CustomRingBufferGeometry({
     const botIn = botOut + 3;
     const midIn = botOut + 4;
     const topIn = botOut + 5;
-    const nextBotOut = 6 * (thetaIndex + 1);
+    let nextBotOut;
+    if (thetaIndex === thetaSegments - 1) {
+      // last should be connected with first
+      nextBotOut = 0;
+    } else {
+      nextBotOut = 6 * (thetaIndex + 1);
+    }
     const nextMidOut = nextBotOut + 1;
     const nextTopOut = nextBotOut + 2;
     const nextBotIn = nextBotOut + 3;
@@ -202,7 +214,7 @@ function CustomRingBufferGeometry({
   this.setIndex(indices);
   this.addAttribute("position", new Float32BufferAttribute(vertices, 3));
   this.addAttribute("normal", new Float32BufferAttribute(normals, 3));
-  // this.addAttribute("uv", new Float32BufferAttribute(uvs, 2));
+  this.addAttribute("uv", new Float32BufferAttribute(uvs, 2));
 }
 
 CustomRingBufferGeometry.prototype = Object.create(BufferGeometry.prototype);
