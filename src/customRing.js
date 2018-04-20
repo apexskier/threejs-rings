@@ -148,16 +148,16 @@ function CustomRingBufferGeometry({
     // bottom outer
     vertices.push(x, y, zBot);
     normals.push(0, 0, 1);
-    uvs.push(percent, 0.5);
+    uvs.push(1 - percent, 0.5);
     // mid outer
     vertices.push(x, y, zMid);
     const outerNormal = new Vector3(cosAngle, sinAngle, 0).normalize();
     normals.push(outerNormal.x, outerNormal.y, outerNormal.z);
-    uvs.push(percent, 0.5 + uvMid);
+    uvs.push(1 - percent, 0.5 + uvMid);
     // top outer
     vertices.push(x, y, zTop);
     normals.push(0, 0, -1);
-    uvs.push(percent, 0.5 + uvTop);
+    uvs.push(1 - percent, 0.5 + uvTop);
 
     x = innerRadius * cosAngle;
     y = innerRadius * sinAngle;
@@ -165,16 +165,16 @@ function CustomRingBufferGeometry({
     // bottom inner
     vertices.push(x, y, zBot);
     normals.push(0, 0, 1);
-    uvs.push(percent, 0);
+    uvs.push(1 - percent, 0);
     // mid inner
     vertices.push(x, y, zMid);
     const innerNormal = new Vector3(-cosAngle, -sinAngle, 0).normalize();
     normals.push(innerNormal.x, innerNormal.y, innerNormal.z);
-    uvs.push(percent, 0.5 - uvMid);
+    uvs.push(1 - percent, 0.5 - uvMid);
     // top inner
     vertices.push(x, y, zTop);
     normals.push(0, 0, -1);
-    uvs.push(percent, 0.5 - uvTop);
+    uvs.push(1 - percent, 0.5 - uvTop);
   }
 
   for (let thetaIndex = 0; thetaIndex < thetaSegments; thetaIndex++) {
