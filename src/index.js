@@ -41,7 +41,7 @@ const settings = {
 };
 
 init();
-initGui();
+// initGui();
 requestAnimationFrame(animate);
 
 // https://github.com/mrdoob/three.js/pull/9746
@@ -168,31 +168,16 @@ function init() {
   camera.lookAt(0, 0, 0);
 
   scene = new THREE.Scene();
+
+  // var axesHelper = new THREE.AxesHelper(100);
+  // scene.add(axesHelper);
+
   // scene.background = new THREE.Color(0x72645b);
-  // scene.fog = new THREE.Fog(0x72645b, 2, 15);
-
-  // Ground
-
-  // var plane = new THREE.Mesh(
-  //   new THREE.PlaneBufferGeometry(40, 40),
-  //   new THREE.MeshPhongMaterial({ color: 0x999999, specular: 0x101010 }),
-  // );
-  // plane.rotation.x = -Math.PI / 2;
-  // plane.position.y = -0.5;
-  // scene.add(plane);
-
-  // plane.receiveShadow = true;
-
-  // ASCII file
-
-  var loader = new THREE.STLLoader();
 
   var ringGroup = new THREE.Group();
   ringGroup.rotateX(-Math.PI / 2);
   scene.add(ringGroup);
   addObjectToControls(ringGroup);
-
-  // Binary files
 
   const aishaRingGeometry = new CustomRingGeometry({
     innerRadius: aishaInnerRadiusMM,
@@ -253,18 +238,12 @@ function init() {
     ringGroup.add(aishaRingMesh);
   })();
 
-  var axesHelper = new THREE.AxesHelper(100);
-  scene.add(axesHelper);
-
   // Lights
-
-  // scene.add(new THREE.HemisphereLight(0x443333, 0x111122));
 
   ambientLight = new THREE.AmbientLight(0xffffff, settings.ambientIntensity);
   scene.add(ambientLight);
 
   addShadowedLight(1, 1, 1, 0xffffff, 1.35);
-  // addShadowedLight(0.5, -2, 3, 0xffaa00, 1);
 
   // renderer
 
@@ -280,15 +259,7 @@ function init() {
   container.appendChild(renderer.domElement);
 
   stats = new Stats();
-  container.appendChild(stats.dom);
-
-  // controls.autoRotate = true;
-  // controls.autoRotateSpeed = 0.2;
-  // controls.enableDamping = true;
-  // controls.dampingFactor = 0.1;
-  // controls.enablePan = false;
-  // controls.maxDistance = 8;
-  // controls.minDistance = 1.5;
+  // container.appendChild(stats.dom);
 
   window.addEventListener("resize", onWindowResize, false);
 }
