@@ -8,6 +8,7 @@ import {
   addObjectToControls,
   controlsUpdate,
   ignoreFromElement,
+  initControls,
 } from "./controls";
 
 if (!Detector.webgl) Detector.addGetWebGLMessage();
@@ -18,6 +19,7 @@ const thicknessMM = 1.7;
 const heightMM = 6;
 const togetherDistance = 2.3;
 
+let container;
 let stats;
 let camera;
 let scene;
@@ -41,6 +43,7 @@ const settings = {
 };
 
 init();
+initControls(container);
 // initGui();
 requestAnimationFrame(animate);
 
@@ -155,7 +158,7 @@ async function loadEnvTexture() {
 }
 
 function init() {
-  const container = document.createElement("div");
+  container = document.getElementById("rings");
   document.body.appendChild(container);
 
   camera = new THREE.PerspectiveCamera(

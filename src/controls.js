@@ -19,10 +19,17 @@ function toDegrees(angle) {
   return angle * (180 / Math.PI);
 }
 
-function getPosition(ev) {
+function getClickPosition(ev) {
   return {
     x: threeSixty * (ev.offsetX / document.body.clientWidth),
     y: threeSixty * (ev.offsetY / document.body.clientWidth),
+  };
+}
+
+function getTouchPosition(ev) {
+  return {
+    x: threeSixty * (ev.targetTouches[0].pageX / document.body.clientWidth),
+    y: threeSixty * (ev.targetTouches[0].pageY / document.body.clientWidth),
   };
 }
 
@@ -30,43 +37,84 @@ export function ignoreFromElement(el) {
   ignoredElements.push(el);
 }
 
-window.addEventListener("mousedown", ev => {
-  if (ignoredElements.some(el => el.contains(ev.target))) {
-    return;
+export function initControls(rootElement) {
+  function handleInteractionStart(pos) {
+    startInteractingTime = Date.now();
+    currentPosition = pos;
+    startInteractionPosition = pos;
+    lastInteractionPosition = pos;
+    isRotating = true;
   }
-  startInteractingTime = Date.now();
-  const pos = getPosition(ev);
-  currentPosition = pos;
-  startInteractionPosition = pos;
-  isRotating = true;
-});
 
-window.addEventListener("mouseup", ev => {
-  if (ignoredElements.some(el => el.contains(ev.target))) {
-    return;
-  }
-  const now = Date.now();
-  const pos = getPosition(ev);
-  const deltaTime = now - startInteractingTime;
-  if (deltaTime < 500) {
-    const deltaMove = {
-      x: pos.x - startInteractionPosition.x,
-      y: pos.y - startInteractionPosition.y,
-    };
-    currentSpeed = {
-      x: deltaMove.x / deltaTime * 50,
-      y: deltaMove.y / deltaTime * 50,
-    };
-  }
-  isRotating = false;
-});
+  rootElement.addEventListener("touchstart", ev => {
+    if (ignoredElements.some(el => el.contains(ev.target))) {
+      return;
+    }
+    ev.preventDefault();
+    if (ev.touches.length === 1) {
+      handleInteractionStart(getTouchPosition(ev));
+    }
+  });
 
-window.addEventListener("mousemove", ev => {
-  if (ignoredElements.some(el => el.contains(ev.target))) {
-    return;
+  rootElement.addEventListener("mousedown", ev => {
+    if (ignoredElements.some(el => el.contains(ev.target))) {
+      return;
+    }
+    handleInteractionStart(getClickPosition(ev));
+  });
+
+  function handleInteractionEnd(pos) {
+    const now = Date.now();
+    const deltaTime = now - startInteractingTime;
+    if (deltaTime < 500) {
+      const deltaMove = {
+        x: pos.x - startInteractionPosition.x,
+        y: pos.y - startInteractionPosition.y,
+      };
+      currentSpeed = {
+        x: deltaMove.x / deltaTime * 50,
+        y: deltaMove.y / deltaTime * 50,
+      };
+    }
+    isRotating = false;
   }
-  currentPosition = getPosition(ev);
-});
+
+  rootElement.addEventListener("touchend", ev => {
+    if (ignoredElements.some(el => el.contains(ev.target))) {
+      return;
+    }
+    ev.preventDefault();
+    handleInteractionEnd(lastInteractionPosition);
+  });
+
+  rootElement.addEventListener("mouseup", ev => {
+    if (ignoredElements.some(el => el.contains(ev.target))) {
+      return;
+    }
+    handleInteractionEnd(getClickPosition(ev));
+  });
+
+  function handleInteractionMove(pos) {
+    currentPosition = pos;
+  }
+
+  rootElement.addEventListener("touchmove", ev => {
+    if (ignoredElements.some(el => el.contains(ev.target))) {
+      return;
+    }
+    ev.preventDefault();
+    if (ev.touches.length === 1) {
+      handleInteractionMove(getTouchPosition(ev));
+    }
+  });
+
+  rootElement.addEventListener("mousemove", ev => {
+    if (ignoredElements.some(el => el.contains(ev.target))) {
+      return;
+    }
+    handleInteractionMove(getClickPosition(ev));
+  });
+}
 
 export function addObjectToControls(obj) {
   objects.push(obj);
