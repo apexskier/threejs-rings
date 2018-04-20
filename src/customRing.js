@@ -20,6 +20,7 @@ function CustomRingGeometry({
   height,
   pointsEdgeHeightPercent,
   points,
+  invert,
 }) {
   Geometry.call(this);
 
@@ -33,6 +34,7 @@ function CustomRingGeometry({
     height,
     pointsEdgeHeightPercent,
     points,
+    invert,
   };
 
   this.fromBufferGeometry(new CustomRingBufferGeometry(this.parameters));
@@ -50,8 +52,9 @@ function CustomRingBufferGeometry({
   thetaSegments = 8,
   thetaLength = Math.PI * 2,
   height = 1,
-  pointsEdgeHeightPercent = 0.1,
+  pointsEdgeHeightPercent = 0.2,
   points,
+  invert = false,
 }) {
   BufferGeometry.call(this);
 
@@ -65,6 +68,7 @@ function CustomRingBufferGeometry({
     height,
     pointsEdgeHeightPercent,
     points,
+    invert,
   };
 
   if (thetaSegments < 3) {
@@ -115,25 +119,39 @@ function CustomRingBufferGeometry({
     const cosAngle = Math.cos(segment);
     const sinAngle = Math.sin(segment);
 
-    const pointHeight =
-      height + (pointForTheta(percent) - 0.5) * pointHeightFactor;
-
-    const z = 0;
     let x = outerRadius * cosAngle;
     let y = outerRadius * sinAngle;
 
-    const outerNormal = new Vector3(cosAngle, sinAngle, 0).normalize();
-    const zTop= z + pointHeight;
-    const zMid = zTop - pointHeightOffset;
-    const uvTop = (pointHeight / maxHeight) / 2;
-    const uvMid = ((pointHeight - pointHeightOffset) / maxHeight) / 2;
+    let pointHeight;
+    if (invert) {
+      pointHeight = height + (0.5 - pointForTheta(percent)) * pointHeightFactor;
+    } else {
+      pointHeight = height + (pointForTheta(percent) - 0.5) * pointHeightFactor;
+    }
+
+    let zBot;
+    let zTop;
+    let zMid;
+    if (invert) {
+      zTop = maxHeight;
+      zBot = zTop - pointHeight;
+      zMid = zBot + pointHeightOffset;
+    } else {
+      zBot = 0;
+      zTop = zBot + pointHeight;
+      zMid = zTop - pointHeightOffset;
+    }
+
+    const uvMid = (pointHeight - pointHeightOffset) / maxHeight / 2;
+    const uvTop = pointHeight / maxHeight / 2;
 
     // bottom outer
-    vertices.push(x, y, z);
+    vertices.push(x, y, zBot);
     normals.push(0, 0, 1);
     uvs.push(percent, 0.5);
     // mid outer
     vertices.push(x, y, zMid);
+    const outerNormal = new Vector3(cosAngle, sinAngle, 0).normalize();
     normals.push(outerNormal.x, outerNormal.y, outerNormal.z);
     uvs.push(percent, 0.5 + uvMid);
     // top outer
@@ -144,14 +162,13 @@ function CustomRingBufferGeometry({
     x = innerRadius * cosAngle;
     y = innerRadius * sinAngle;
 
-    const innerNormal = new Vector3(-cosAngle, -sinAngle, 0).normalize();
-
     // bottom inner
-    vertices.push(x, y, 0.5);
+    vertices.push(x, y, zBot);
     normals.push(0, 0, 1);
     uvs.push(percent, 0);
     // mid inner
     vertices.push(x, y, zMid);
+    const innerNormal = new Vector3(-cosAngle, -sinAngle, 0).normalize();
     normals.push(innerNormal.x, innerNormal.y, innerNormal.z);
     uvs.push(percent, 0.5 - uvMid);
     // top inner
@@ -159,8 +176,6 @@ function CustomRingBufferGeometry({
     normals.push(0, 0, -1);
     uvs.push(percent, 0.5 - uvTop);
   }
-
-  console.log(uvs);
 
   for (let thetaIndex = 0; thetaIndex < thetaSegments; thetaIndex++) {
     const botOut = 6 * thetaIndex;

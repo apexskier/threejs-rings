@@ -16,6 +16,7 @@ const camInnerRadiusMM = 17.5;
 const aishaInnerRadiusMM = 16.57;
 const thicknessMM = 1.7;
 const heightMM = 6;
+const togetherDistance = 2.3;
 
 let stats;
 let camera;
@@ -23,17 +24,20 @@ let scene;
 let renderer;
 let material;
 let ambientLight;
+let aishaRingMesh;
+let cameronRingMesh;
 
 const settings = {
-  metalness: 1.0,
-  roughness: 0.4,
-  refractionRatio: 0.470, // https://pixelandpoly.com/ior.html
+  color: 0xdcd6bc,
+  roughness: 0.85,
+  refractionRatio: 0.47, // https://pixelandpoly.com/ior.html
   ambientIntensity: 0.2,
   aoMapIntensity: 1.0,
   envMapIntensity: 1.0,
   displacementScale: 2.436143, // from original model
   normalScale: 1.0,
   wireframe: false,
+  ringDistance: 5,
 };
 
 init();
@@ -72,18 +76,14 @@ function textureFromEquirectangular(source, size, detail) {
 // Init gui
 function initGui() {
   const gui = new dat.GUI();
-  gui
-    .add(settings, "metalness")
-    .min(0)
-    .max(1)
-    .onChange(function(value) {
-      material.metalness = value;
-    });
+  gui.addColor(settings, "color").onChange(value => {
+    material.color.setHex(value);
+  });
   gui
     .add(settings, "roughness")
     .min(0)
     .max(1)
-    .onChange(function(value) {
+    .onChange(value => {
       material.roughness = value;
     });
   gui
@@ -97,36 +97,44 @@ function initGui() {
     .add(settings, "aoMapIntensity")
     .min(0)
     .max(1)
-    .onChange(function(value) {
+    .onChange(value => {
       material.aoMapIntensity = value;
     });
   gui
     .add(settings, "ambientIntensity")
     .min(0)
     .max(1)
-    .onChange(function(value) {
+    .onChange(value => {
       ambientLight.intensity = value;
     });
   gui
     .add(settings, "envMapIntensity")
     .min(0)
     .max(3)
-    .onChange(function(value) {
+    .onChange(value => {
       material.envMapIntensity = value;
     });
   gui
     .add(settings, "displacementScale")
     .min(0)
     .max(3.0)
-    .onChange(function(value) {
+    .onChange(value => {
       material.displacementScale = value;
     });
   gui
     .add(settings, "normalScale")
     .min(-1)
     .max(1)
-    .onChange(function(value) {
+    .onChange(value => {
       material.normalScale.set(1, -1).multiplyScalar(value);
+    });
+  gui
+    .add(settings, "ringDistance")
+    .min(0)
+    .max(50)
+    .onChange(value => {
+      aishaRingMesh.position.setZ(value);
+      cameronRingMesh.position.setZ(-value);
     });
   gui.add(settings, "wireframe").onChange(function(value) {
     material.wireframe = value;
@@ -186,32 +194,26 @@ function init() {
 
   // Binary files
 
-  const aishaMaterial = new THREE.MeshPhongMaterial({
-    color: 0xfffdf4,
-    specular: 0xfffae8,
-    shininess: 600,
+  const aishaRingGeometry = new CustomRingGeometry({
+    innerRadius: aishaInnerRadiusMM,
+    outerRadius: aishaInnerRadiusMM + thicknessMM,
+    thetaSegments: 64,
+    height: heightMM,
+    points: mountainPoints,
+    pointsEdgeHeightPercent: 0.1,
+    invert: true,
   });
+  aishaRingGeometry.computeVertexNormals();
 
-  // loader.load(require("../aisha.stl"), function(geometry) {
-  //   const mesh = new THREE.Mesh(geometry, aishaMaterial);
-
-  //   mesh.position.set(0, 0, 0);
-  //   mesh.scale.set(0.009, 0.009, 0.009);
-
-  //   mesh.castShadow = true;
-  //   mesh.receiveShadow = true;
-
-  //   ringGroup.add(mesh);
-  // });
-
-  const ringGeometry = new CustomRingGeometry({
+  const cameronRingGeometry = new CustomRingGeometry({
     innerRadius: camInnerRadiusMM,
     outerRadius: camInnerRadiusMM + thicknessMM,
     thetaSegments: 64,
     height: heightMM,
+    pointsEdgeHeightPercent: 0.2,
     points: mountainPoints,
   });
-  ringGeometry.computeVertexNormals();
+  cameronRingGeometry.computeVertexNormals();
 
   (async () => {
     const [envMap, normalMap] = await Promise.all([
@@ -220,16 +222,10 @@ function init() {
     ]);
 
     const cameronMaterial = new THREE.MeshStandardMaterial({
-      color: 0xfffdf4,
+      color: settings.color,
       roughness: settings.roughness,
-      metalness: settings.metalness,
+      metalness: 1,
       normalMap,
-      normalScale: new THREE.Vector2(1, 0.5), // why does the normal map require negation in this case?
-      // aoMap: aoMap,
-      // aoMapIntensity: 1,
-      // displacementMap: displacementMap,
-      // displacementScale: settings.displacementScale,
-      // displacementBias: - 0.428408, // from original model
       envMap,
       envMapIntensity: settings.envMapIntensity,
     });
@@ -237,32 +233,24 @@ function init() {
     material = cameronMaterial;
     material.wireframe = settings.wireframe;
 
-    // loader.load(require("../cameron.stl"), function(geometry) {
-    //   const mesh = new THREE.Mesh(geometry, cameronMaterial);
+    cameronRingMesh = new THREE.Mesh(cameronRingGeometry, cameronMaterial);
+    cameronRingMesh.translateZ(-settings.ringDistance);
 
-    //   mesh.position.set(0, 0, 0);
-    //   mesh.scale.set(0.009, 0.009, 0.009);
+    ringGroup.add(cameronRingMesh);
 
-    //   mesh.castShadow = true;
-    //   mesh.receiveShadow = true;
+    const aishaMaterial = new THREE.MeshStandardMaterial({
+      color: 0xdcd6bc,
+      roughness: 0.1,
+      metalness: 1,
+      envMap,
+      envMapIntensity: settings.envMapIntensity,
+    });
+    aishaMaterial.refractionRatio = settings.refractionRatio;
 
-    //   geometry.computeVertexNormals();
+    aishaRingMesh = new THREE.Mesh(aishaRingGeometry, aishaMaterial);
+    aishaRingMesh.translateZ(settings.ringDistance);
 
-    //   ringGroup.add(mesh);
-    // });
-
-    // const wireframeMaterial = new THREE.MeshBasicMaterial({
-    //   color: 0x00a5ff,
-    //   side: THREE.DoubleSide,
-    // });
-    // wireframeMaterial.wireframe = true;
-    // const ringMesh = new THREE.Mesh(ringGeometry, wireframeMaterial);
-    const ringMesh = new THREE.Mesh(ringGeometry, cameronMaterial);
-
-    // var helper = new THREE.VertexNormalsHelper(ringMesh, 2, 0x00ff00, 1);
-    // ringGroup.add(helper);
-
-    ringGroup.add(ringMesh);
+    ringGroup.add(aishaRingMesh);
   })();
 
   var axesHelper = new THREE.AxesHelper(100);
@@ -343,6 +331,13 @@ function animate() {
 
 function render() {
   controlsUpdate();
+
+  if (aishaRingMesh && cameronRingMesh) {
+    const distance =
+      (Math.sin(Date.now() / 1000) + 1) / 2 * 10 + togetherDistance;
+    aishaRingMesh.position.setZ(distance);
+    cameronRingMesh.position.setZ(-distance);
+  }
 
   renderer.render(scene, camera);
 }
