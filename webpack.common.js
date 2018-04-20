@@ -2,8 +2,6 @@ const path = require("path");
 const webpack = require("webpack");
 
 module.exports = {
-  mode: "development",
-  devtool: "source-map",
   entry: "./src/index.js",
   output: {
     filename: "main.js",
@@ -22,10 +20,12 @@ module.exports = {
       },
     ],
   },
+  externals: {
+    three: "THREE",
+  },
   plugins: [
     new webpack.ProvidePlugin({
       THREE: "three",
     }),
   ],
-  watch: true,
 };
