@@ -16,7 +16,7 @@ if (!Detector.webgl) Detector.addGetWebGLMessage();
 const camInnerRadiusMM = 17.5;
 const aishaInnerRadiusMM = 16.57;
 const thicknessMM = 1.7;
-const togetherDistance = 2.3;
+const togetherDistance = 1.8;
 const thetaSegments = 128;
 
 let container;
@@ -191,11 +191,6 @@ function init() {
 
   scene = new THREE.Scene();
 
-  // var axesHelper = new THREE.AxesHelper(100);
-  // scene.add(axesHelper);
-
-  // scene.background = new THREE.Color(0x72645b);
-
   var ringGroup = new THREE.Group();
   ringGroup.rotateX(-Math.PI / 2);
   scene.add(ringGroup);
@@ -224,7 +219,6 @@ function init() {
 
   (async () => {
     const [envMap, normalMap] = await Promise.all([
-      // loadEnvTexture("../reflection.jpg"),
       loadEnvTexture(),
       loadTexture(require("../normalMap.png")),
     ]);
@@ -270,7 +264,7 @@ function init() {
 
   // renderer
 
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
 

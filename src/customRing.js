@@ -5,12 +5,10 @@ import {
   Vector2,
   Vector3,
 } from "three";
-// import {  } from '../core/BufferGeometry.js';
-// import { } from '../core/BufferAttribute.js';
-// import { } from '../math/Vector2.js';
-// import { } from '../math/Vector3.js';
+import { POINT_CONVERSION_HYBRID } from "constants";
 
-// CustomRingGeometry
+// TODO the normals I'm generating here end up being recomputed later. I'd like
+// to add a custom computation, especially for the top and bottom faces
 
 function CustomRingGeometry({
   innerRadius,
@@ -131,29 +129,40 @@ function CustomRingBufferGeometry({
 
     let zBot;
     let zTop;
-    let zMid;
+    let zMidTop;
+    let zMidBot;
     if (invert) {
       zTop = maxHeight;
       zBot = zTop - pointHeight;
-      zMid = zBot + pointHeightOffset;
+      zMidBot = zTop - pointHeightOffset
+      zMidTop = zBot + pointHeightOffset;
     } else {
       zBot = 0;
       zTop = zBot + pointHeight;
-      zMid = zTop - pointHeightOffset;
+      zMidBot = zBot + pointHeightOffset
+      zMidTop = zTop - pointHeightOffset;
     }
 
-    const uvMid = (pointHeight - pointHeightOffset) / maxHeight / 2;
+    const uvMidTop = (pointHeight - pointHeightOffset) / maxHeight / 2;
     const uvTop = pointHeight / maxHeight / 2;
+    const outerNormal = new Vector3(cosAngle, sinAngle, 0).normalize();
+    const innerNormal = new Vector3(-cosAngle, -sinAngle, 0).normalize();
+
+    // NOTE: not dealing with uvs for inverted, since my inverted ring doesn't
+    // use texture maps
 
     // bottom outer
     vertices.push(x, y, zBot);
     normals.push(0, 0, 1);
     uvs.push(1 - percent, 0.5);
-    // mid outer
-    vertices.push(x, y, zMid);
-    const outerNormal = new Vector3(cosAngle, sinAngle, 0).normalize();
+    // mid bot outer
+    vertices.push(x, y, zMidBot);
     normals.push(outerNormal.x, outerNormal.y, outerNormal.z);
-    uvs.push(1 - percent, 0.5 + uvMid);
+    uvs.push(1 - percent, 0.5 + pointsEdgeHeightPercent / 2);
+    // mid top outer
+    vertices.push(x, y, zMidTop);
+    normals.push(outerNormal.x, outerNormal.y, outerNormal.z);
+    uvs.push(1 - percent, 0.5 + uvMidTop);
     // top outer
     vertices.push(x, y, zTop);
     normals.push(0, 0, -1);
@@ -166,11 +175,14 @@ function CustomRingBufferGeometry({
     vertices.push(x, y, zBot);
     normals.push(0, 0, 1);
     uvs.push(1 - percent, 0);
-    // mid inner
-    vertices.push(x, y, zMid);
-    const innerNormal = new Vector3(-cosAngle, -sinAngle, 0).normalize();
+    // mid bot inner
+    vertices.push(x, y, zMidBot);
     normals.push(innerNormal.x, innerNormal.y, innerNormal.z);
-    uvs.push(1 - percent, 0.5 - uvMid);
+    uvs.push(1 - percent, pointsEdgeHeightPercent / 2);
+    // mid top inner
+    vertices.push(x, y, zMidTop);
+    normals.push(innerNormal.x, innerNormal.y, innerNormal.z);
+    uvs.push(1 - percent, 0.5 - uvMidTop);
     // top inner
     vertices.push(x, y, zTop);
     normals.push(0, 0, -1);
@@ -178,24 +190,28 @@ function CustomRingBufferGeometry({
   }
 
   for (let thetaIndex = 0; thetaIndex < thetaSegments; thetaIndex++) {
-    const botOut = 6 * thetaIndex;
-    const midOut = botOut + 1;
-    const topOut = botOut + 2;
-    const botIn = botOut + 3;
-    const midIn = botOut + 4;
-    const topIn = botOut + 5;
+    const botOut = 8 * thetaIndex;
+    const midBotOut = botOut + 1;
+    const midTopOut = botOut + 2;
+    const topOut = botOut + 3;
+    const botIn = botOut + 4;
+    const midBotIn = botOut + 5;
+    const midTopIn = botOut + 6;
+    const topIn = botOut + 7;
     let nextBotOut;
     if (thetaIndex === thetaSegments - 1) {
       // last should be connected with first
       nextBotOut = 0;
     } else {
-      nextBotOut = 6 * (thetaIndex + 1);
+      nextBotOut = 8 * (thetaIndex + 1);
     }
-    const nextMidOut = nextBotOut + 1;
-    const nextTopOut = nextBotOut + 2;
-    const nextBotIn = nextBotOut + 3;
-    const nextMidIn = nextBotOut + 4;
-    const nextTopIn = nextBotOut + 5;
+    const nextMidBotOut = nextBotOut + 1;
+    const nextMidTopOut = nextBotOut + 2;
+    const nextTopOut = nextBotOut + 3;
+    const nextBotIn = nextBotOut + 4;
+    const nextMidBotIn = nextBotOut + 5;
+    const nextMidTopIn = nextBotOut + 6;
+    const nextTopIn = nextBotOut + 7;
 
     // faces
 
@@ -208,20 +224,28 @@ function CustomRingBufferGeometry({
     indices.push(nextTopOut, nextTopIn, topIn);
 
     // inside
-    indices.push(botIn, midIn, nextMidIn);
-    indices.push(nextMidIn, nextBotIn, botIn);
+    indices.push(botIn, midTopIn, nextMidTopIn);
+    indices.push(nextMidTopIn, nextBotIn, botIn);
 
     // outside
-    indices.push(botOut, nextMidOut, midOut);
-    indices.push(nextMidOut, botOut, nextBotOut);
+    indices.push(botOut, nextMidTopOut, midTopOut);
+    indices.push(nextMidTopOut, botOut, nextBotOut);
 
     // inside top
-    indices.push(midIn, topIn, nextTopIn);
-    indices.push(nextTopIn, nextMidIn, midIn);
+    indices.push(midTopIn, topIn, nextTopIn);
+    indices.push(nextTopIn, nextMidTopIn, midTopIn);
 
     // outside top
-    indices.push(midOut, nextTopOut, topOut);
-    indices.push(nextTopOut, midOut, nextMidOut);
+    indices.push(midTopOut, nextTopOut, topOut);
+    indices.push(nextTopOut, midTopOut, nextMidTopOut);
+
+    // inside bot
+    indices.push(midBotIn, botIn, nextBotIn);
+    indices.push(nextBotIn, nextMidBotIn, midBotIn);
+
+    // outside bot
+    indices.push(midBotOut, nextBotOut, botOut);
+    indices.push(nextBotOut, midBotOut, nextMidBotOut);
   }
 
   // build geometry
