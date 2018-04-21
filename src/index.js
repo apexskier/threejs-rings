@@ -16,8 +16,8 @@ if (!Detector.webgl) Detector.addGetWebGLMessage();
 const camInnerRadiusMM = 17.5;
 const aishaInnerRadiusMM = 16.57;
 const thicknessMM = 1.7;
-const heightMM = 6;
 const togetherDistance = 2.3;
+const thetaSegments = 128;
 
 let container;
 let stats;
@@ -31,7 +31,8 @@ let cameronRingMesh;
 
 const settings = {
   color: 0xdcd6bc,
-  roughness: 0.85,
+  roughness: 0.1,
+  reflectivity: 0.5,
   refractionRatio: 0.47, // https://pixelandpoly.com/ior.html
   ambientIntensity: 0.2,
   aoMapIntensity: 1.0,
@@ -44,7 +45,7 @@ const settings = {
 
 init();
 initControls(container);
-// initGui();
+initGui();
 requestAnimationFrame(animate);
 
 // https://github.com/mrdoob/three.js/pull/9746
@@ -88,6 +89,13 @@ function initGui() {
     .max(1)
     .onChange(value => {
       material.roughness = value;
+    });
+  gui
+    .add(settings, "reflectivity")
+    .min(0)
+    .max(5)
+    .onChange(function(value) {
+      material.reflectivity = value;
     });
   gui
     .add(settings, "refractionRatio")
@@ -153,8 +161,19 @@ async function loadTexture(source) {
 }
 
 async function loadEnvTexture() {
-  const texture = await loadTexture(require("../reflection.jpg"));
-  return textureFromEquirectangular(texture, 2048);
+  return new Promise(resolve => {
+    new THREE.CubeTextureLoader().load(
+      [
+        require("./env/px.jpg"),
+        require("./env/nx.jpg"),
+        require("./env/py.jpg"),
+        require("./env/ny.jpg"),
+        require("./env/pz.jpg"),
+        require("./env/nz.jpg"),
+      ],
+      resolve,
+    );
+  });
 }
 
 function init() {
@@ -185,8 +204,8 @@ function init() {
   const aishaRingGeometry = new CustomRingGeometry({
     innerRadius: aishaInnerRadiusMM,
     outerRadius: aishaInnerRadiusMM + thicknessMM,
-    thetaSegments: 64,
-    height: heightMM,
+    thetaSegments,
+    height: 4.7,
     points: mountainPoints,
     pointsEdgeHeightPercent: 0.1,
     invert: true,
@@ -196,8 +215,8 @@ function init() {
   const cameronRingGeometry = new CustomRingGeometry({
     innerRadius: camInnerRadiusMM,
     outerRadius: camInnerRadiusMM + thicknessMM,
-    thetaSegments: 64,
-    height: heightMM,
+    thetaSegments,
+    height: 6,
     pointsEdgeHeightPercent: 0.2,
     points: mountainPoints,
   });
@@ -205,34 +224,35 @@ function init() {
 
   (async () => {
     const [envMap, normalMap] = await Promise.all([
+      // loadEnvTexture("../reflection.jpg"),
       loadEnvTexture(),
       loadTexture(require("../normalMap.png")),
     ]);
 
     const cameronMaterial = new THREE.MeshStandardMaterial({
-      color: settings.color,
-      roughness: settings.roughness,
+      color: 0xd2d0ca,
+      roughness: 0.45,
       metalness: 1,
       normalMap,
       envMap,
       envMapIntensity: settings.envMapIntensity,
     });
     cameronMaterial.refractionRatio = settings.refractionRatio;
-    material = cameronMaterial;
-    material.wireframe = settings.wireframe;
 
     cameronRingMesh = new THREE.Mesh(cameronRingGeometry, cameronMaterial);
     cameronRingMesh.translateZ(-settings.ringDistance);
 
     ringGroup.add(cameronRingMesh);
 
-    const aishaMaterial = new THREE.MeshStandardMaterial({
-      color: 0xdcd6bc,
-      roughness: 0.1,
+    const aishaMaterial = new THREE.MeshPhysicalMaterial({
+      color: settings.color,
+      roughness: 0.2,
+      reflectivity: settings.reflectivity,
       metalness: 1,
       envMap,
       envMapIntensity: settings.envMapIntensity,
     });
+    material = aishaMaterial;
     aishaMaterial.refractionRatio = settings.refractionRatio;
 
     aishaRingMesh = new THREE.Mesh(aishaRingGeometry, aishaMaterial);
@@ -262,7 +282,7 @@ function init() {
   container.appendChild(renderer.domElement);
 
   stats = new Stats();
-  // container.appendChild(stats.dom);
+  container.appendChild(stats.dom);
 
   window.addEventListener("resize", onWindowResize, false);
 }

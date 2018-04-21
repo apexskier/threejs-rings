@@ -11,10 +11,10 @@ module.exports = {
     rules: [
       { test: /\.js$/, exclude: /node_modules/, loader: "babel-loader" },
       {
-        test: /\.(png|jpg|gif|stl)$/,
+        test: /\.(png|jpg|gif)$/,
         use: [
           {
-            loader: "file-loader",
+            loader: "url-loader",
           },
         ],
       },

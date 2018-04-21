@@ -106,7 +106,7 @@ function CustomRingBufferGeometry({
     // return postY * percentThrough + preY * percentThrough;
   }
 
-  const pointHeightFactor = 3;
+  const pointHeightFactor = 5;
   const maxHeight = height + pointHeightFactor / 2;
   const pointHeightOffset = pointsEdgeHeightPercent * height;
 
